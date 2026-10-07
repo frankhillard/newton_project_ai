@@ -168,8 +168,10 @@ def build_library(t, extra_exp_rates=(0.5, 1.0, 2.0, 5.0, 10.0)):
     coefficient). Sparse regression below decides which of these, if any,
     actually belong in the equation.
     """
-    names = ["1", "t", "t^2", "t^3", "t^4"]
-    cols = [np.ones_like(t), t, t ** 2, t ** 3, t ** 4]
+    # names = ["1", "t", "t^2", "t^3", "t^4"]
+    # cols = [np.ones_like(t), t, t ** 2, t ** 3, t ** 4]
+    names = ["1", "t", "t^2"]
+    cols = [np.ones_like(t), t, t ** 2]
 
     t_safe = np.clip(t, 0, None)
     names.append("sqrt(t)")
