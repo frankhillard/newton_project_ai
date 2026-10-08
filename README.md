@@ -69,6 +69,7 @@ python calibrate.py --in trajectory.csv --out trajectory_m.csv \
 
 ```bash
 python physics_discovery.py --in trajectory_m.csv --out-plot trajectory_fit.png
+python physics_discovery.py --in data/calibrated_trajectories/P1120176_1.csv --out-plot trajectory_fit.png --max-poly-degree 2
 ```
 
 Unlike a script that fits a pre-written formula (e.g. assuming
