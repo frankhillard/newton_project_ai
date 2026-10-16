@@ -160,18 +160,21 @@ def polynomial_equation_str(coeffs, var="x"):
 # (sequential thresholded least squares - the core mechanism behind SINDy,
 #  Brunton/Proctor/Kutz 2016, for discovering governing equations from data)
 
-def build_library(t, extra_exp_rates=(0.5, 1.0, 2.0, 5.0, 10.0)):
+def build_library(t, max_poly_degree=6, extra_exp_rates=(0.5, 1.0, 2.0, 5.0, 10.0)):
     """Build a dictionary of candidate basis functions of t. This is
-    intentionally broad and physics-agnostic: constant, several polynomial
-    powers, square root, and a spread of exponential-decay rates (to allow
-    discovery of drag-like terms without assuming a specific drag
-    coefficient). Sparse regression below decides which of these, if any,
-    actually belong in the equation.
+    intentionally broad and physics-agnostic: constant, polynomial powers
+    up to max_poly_degree, square root, and a spread of exponential-decay
+    rates (to allow discovery of drag-like terms without assuming a
+    specific drag coefficient). Sparse regression below decides which of
+    these, if any, actually belong in the equation.
     """
-    names = ["1", "t", "t^2", "t^3", "t^4"]
-    cols = [np.ones_like(t), t, t ** 2, t ** 3, t ** 4]
-    # names = ["1", "t", "t^2"]
-    # cols = [np.ones_like(t), t, t ** 2]
+    if max_poly_degree < 0:
+        raise ValueError("max_poly_degree must be >= 0")
+    names = ["1"]
+    cols = [np.ones_like(t)]
+    for power in range(1, int(max_poly_degree) + 1):
+        names.append("t" if power == 1 else f"t^{power}")
+        cols.append(t ** power)
 
     t_safe = np.clip(t, 0, None)
     names.append("sqrt(t)")
@@ -219,11 +222,11 @@ def sequential_thresholded_least_squares(Theta, y, threshold, n_iters=15, ridge_
     return Xi
 
 
-def discover_sparse_equation(t, y, max_terms_cap=None):
+def discover_sparse_equation(t, y, max_terms_cap=None, max_poly_degree=6):
     """Sweep sparsity thresholds, pick the sparsity pattern that minimizes
     BIC (not just training error), so the method is penalized for spurious
     extra terms the same way the polynomial-order engine is."""
-    Theta_raw, names = build_library(t)
+    Theta_raw, names = build_library(t, max_poly_degree=max_poly_degree)
     n = len(t)
 
     # Standardize columns for numerically stable thresholding; rescale
@@ -275,8 +278,21 @@ def sparse_equation_str(coeffs_raw, names, var="x"):
     return f"{var}(t) = " + " ".join(terms).lstrip("+")
 
 
+def _max_poly_degree_from_names(names):
+    """Highest t^k present in a library name list. predict_library uses this
+    so a fit made with a capped library rebuilds that same library."""
+    degree = 0
+    for name in names:
+        if name == "t":
+            degree = max(degree, 1)
+        elif name.startswith("t^") and name[2:].isdigit():
+            degree = max(degree, int(name[2:]))
+    return degree
+
+
 def predict_library(t, coeffs_raw, names):
-    Theta_raw, built_names = build_library(t)
+    degree = _max_poly_degree_from_names(names)
+    Theta_raw, built_names = build_library(t, max_poly_degree=degree)
     assert built_names == names
     return Theta_raw @ coeffs_raw
 
@@ -285,7 +301,7 @@ def predict_library(t, coeffs_raw, names):
 
 def discover_axis(t, y, var_name, max_poly_degree=6, verbose=True):
     poly_best, poly_candidates = fit_best_polynomial(t, y, max_degree=max_poly_degree)
-    sparse_best = discover_sparse_equation(t, y)
+    sparse_best = discover_sparse_equation(t, y, max_poly_degree=max_poly_degree)
 
     poly_eq = polynomial_equation_str(poly_best["coeffs"], var=var_name)
     sparse_eq = sparse_equation_str(sparse_best["coeffs_raw"], sparse_best["names"], var=var_name)
@@ -385,7 +401,7 @@ def main():
     ap.add_argument("--only-found", action="store_true",
                      help="Fit only using confidently-detected frames (exclude interpolated ones)")
     ap.add_argument("--max-poly-degree", type=int, default=6,
-                     help="Highest polynomial degree to consider in Engine 1 (default: 6)")
+                     help="Highest polynomial degree to consider in either engine (default: 6)")
     args = ap.parse_args()
 
     t, x, y, found = load_calibrated_csv(args.in_csv, only_found=args.only_found)

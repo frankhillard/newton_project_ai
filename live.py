@@ -300,18 +300,18 @@ class ThrowTracker:
         return "searching"
 
 
-def _draw_line(frame, text, origin, font_scale=0.5):
+def _draw_line(frame, text, origin, font_scale=0.5, color=(255, 255, 255), thickness=1):
     font = cv2.FONT_HERSHEY_SIMPLEX
     x, y = origin
     max_width = max(1, frame.shape[1] - x - 8)
     scale = font_scale
     while scale > 0.35:
-        (width, _), _ = cv2.getTextSize(text, font, scale, 1)
+        (width, _), _ = cv2.getTextSize(text, font, scale, thickness)
         if width <= max_width:
             break
         scale -= 0.05
-    cv2.putText(frame, text, (x, y), font, scale, (0, 0, 0), 3, cv2.LINE_AA)
-    cv2.putText(frame, text, (x, y), font, scale, (255, 255, 255), 1, cv2.LINE_AA)
+    cv2.putText(frame, text, (x, y), font, scale, (0, 0, 0), thickness + 2, cv2.LINE_AA)
+    cv2.putText(frame, text, (x, y), font, scale, color, thickness, cv2.LINE_AA)
     return y + 22
 
 
@@ -328,8 +328,8 @@ def draw_overlay(frame, tracker, detection, extrapolate_sec):
     y_text = _draw_line(frame, f"{len(tracker.samples)} pts  {tracker.status()}  (q quit, c clear)", (10, 24))
     overlay = tracker.overlay
     if overlay is not None:
-        y_text = _draw_line(frame, overlay["x_equation"], (10, y_text))
-        _draw_line(frame, overlay["y_equation"], (10, y_text))
+        y_text = _draw_line(frame, overlay["x_equation"], (10, y_text), color=(0, 255, 255), thickness=2)
+        _draw_line(frame, overlay["y_equation"], (10, y_text), color=(0, 255, 255), thickness=2)
 
 
 def run(camera, refit_interval, max_poly_degree, min_points, extrapolate_sec):
