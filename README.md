@@ -25,6 +25,10 @@ Each stage is a standalone script with its own CSV in/out, so you can
 inspect, correct, or swap out any stage independently (e.g. plug in a
 different, better ball detector without touching the physics fitting code).
 
+`live.py` runs these three stages on this computer's camera and draws the
+discovered curve on the live image. It keeps the measurements in memory
+instead of writing the CSVs.
+
 ## Setup
 
 ```bash
@@ -113,6 +117,27 @@ about the motion model.
 
 It recovers the gravitationnal constant g
 
+### 5. Live camera
+
+`live.py` opens the webcam, tracks a tennis ball by color, calibrates with
+the ball diameter, and discovers `x(t)` and `y(t)` in the background. After
+a throw has enough detected points, the fitted curve and the two equations
+are drawn on the camera image. The fit refreshes while the ball is in
+flight (every 0.2 s by default) and the curve extends a short time past the
+latest detection.
+
+```bash
+python live.py
+python live.py --camera 0 --max-poly-degree 2
+```
+
+`q` quits. `c` clears the current throw and the overlay.
+
+A miss shorter than about 0.4 s does not end the throw. After a longer gap
+the last curve stays on screen until the next throw has a fit of its own.
+`--max-poly-degree` limits the polynomial powers in both discovery engines
+(default 6). `--camera` selects the camera index.
+
 ## Validating the pipeline
 
 `physics_discovery.py` was checked against synthetic data it had no way to
@@ -152,6 +177,7 @@ ball_tracker.py         # Stage 1: video -> pixel trajectory CSV
 calibrate.py             # Stage 2: pixel trajectory -> metric trajectory CSV
 newton_fit.py           # Optional Stage: metric trajectory -> recover g (bias newton)
 physics_discovery.py    # Stage 3: metric trajectory -> discovered equation of motion + plot
+live.py                  # Webcam: track, calibrate, discover, overlay x(t) and y(t)
 requirements.txt
 README.md
 ```
