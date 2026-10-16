@@ -168,10 +168,10 @@ def build_library(t, extra_exp_rates=(0.5, 1.0, 2.0, 5.0, 10.0)):
     coefficient). Sparse regression below decides which of these, if any,
     actually belong in the equation.
     """
-    # names = ["1", "t", "t^2", "t^3", "t^4"]
-    # cols = [np.ones_like(t), t, t ** 2, t ** 3, t ** 4]
-    names = ["1", "t", "t^2"]
-    cols = [np.ones_like(t), t, t ** 2]
+    names = ["1", "t", "t^2", "t^3", "t^4"]
+    cols = [np.ones_like(t), t, t ** 2, t ** 3, t ** 4]
+    # names = ["1", "t", "t^2"]
+    # cols = [np.ones_like(t), t, t ** 2]
 
     t_safe = np.clip(t, 0, None)
     names.append("sqrt(t)")
@@ -283,27 +283,28 @@ def predict_library(t, coeffs_raw, names):
 
 # ---- Combine both engines per axis -----------------------------------------
 
-def discover_axis(t, y, var_name, max_poly_degree=6):
+def discover_axis(t, y, var_name, max_poly_degree=6, verbose=True):
     poly_best, poly_candidates = fit_best_polynomial(t, y, max_degree=max_poly_degree)
     sparse_best = discover_sparse_equation(t, y)
 
     poly_eq = polynomial_equation_str(poly_best["coeffs"], var=var_name)
     sparse_eq = sparse_equation_str(sparse_best["coeffs_raw"], sparse_best["names"], var=var_name)
 
-    print(f"\n[{var_name}(t)] Engine 1 - polynomial order selection (BIC):")
-    print(f"  best degree = {poly_best['degree']}   R^2 = {poly_best['r2']:.5f}   BIC = {poly_best['bic']:.2f}")
-    print(f"  {poly_eq}")
-    ranked = sorted(poly_candidates, key=lambda c: c["bic"])[:3]
-    if len(ranked) > 1:
-        print("  (closest competing degrees, for transparency - small BIC gaps mean the "
-              "data doesn't strongly distinguish between them):")
-        for c in ranked:
-            marker = "<- chosen" if c["degree"] == poly_best["degree"] else ""
-            print(f"    degree {c['degree']}: BIC = {c['bic']:.2f}   R^2 = {c['r2']:.5f}  {marker}")
+    if verbose:
+        print(f"\n[{var_name}(t)] Engine 1 - polynomial order selection (BIC):")
+        print(f"  best degree = {poly_best['degree']}   R^2 = {poly_best['r2']:.5f}   BIC = {poly_best['bic']:.2f}")
+        print(f"  {poly_eq}")
+        ranked = sorted(poly_candidates, key=lambda c: c["bic"])[:3]
+        if len(ranked) > 1:
+            print("  (closest competing degrees, for transparency - small BIC gaps mean the "
+                  "data doesn't strongly distinguish between them):")
+            for c in ranked:
+                marker = "<- chosen" if c["degree"] == poly_best["degree"] else ""
+                print(f"    degree {c['degree']}: BIC = {c['bic']:.2f}   R^2 = {c['r2']:.5f}  {marker}")
 
-    print(f"[{var_name}(t)] Engine 2 - sparse symbolic regression (STLSQ dictionary):")
-    print(f"  nonzero terms = {sparse_best['k']}   R^2 = {sparse_best['r2']:.5f}   BIC = {sparse_best['bic']:.2f}")
-    print(f"  {sparse_eq}")
+        print(f"[{var_name}(t)] Engine 2 - sparse symbolic regression (STLSQ dictionary):")
+        print(f"  nonzero terms = {sparse_best['k']}   R^2 = {sparse_best['r2']:.5f}   BIC = {sparse_best['bic']:.2f}")
+        print(f"  {sparse_eq}")
 
     if poly_best["bic"] <= sparse_best["bic"]:
         winner = {"engine": "polynomial", "y_pred": poly_best["y_pred"],
@@ -311,19 +312,20 @@ def discover_axis(t, y, var_name, max_poly_degree=6):
     else:
         winner = {"engine": "sparse", "y_pred": sparse_best["y_pred"],
                    "r2": sparse_best["r2"], "bic": sparse_best["bic"], "equation": sparse_eq}
-    print(f"[{var_name}(t)] => best discovered model: {winner['engine']}   {winner['equation']}")
+    if verbose:
+        print(f"[{var_name}(t)] => best discovered model: {winner['engine']}   {winner['equation']}")
 
-    # Post-hoc physical interpretation, computed from whatever was
-    # discovered - never assumed in advance. Only triggered if a t^2 term
-    # is present in the polynomial engine's winning model.
-    if poly_best["degree"] >= 2:
-        c_t2 = poly_best["coeffs"][-3]  # coefficient of t^2, highest-power-first indexing
-        implied_accel = 2 * c_t2
-        note = (f"  Note: the discovered t^2 coefficient implies a constant second "
-                f"derivative (acceleration) of {implied_accel:.3f} m/s^2 in {var_name}(t).")
-        if abs(abs(implied_accel) - G_REFERENCE) < 1.0:
-            note += f" This is close to Earth's gravitational acceleration ({G_REFERENCE} m/s^2)."
-        print(note)
+        # Post-hoc physical interpretation, computed from whatever was
+        # discovered - never assumed in advance. Only triggered if a t^2 term
+        # is present in the polynomial engine's winning model.
+        if poly_best["degree"] >= 2:
+            c_t2 = poly_best["coeffs"][-3]  # coefficient of t^2, highest-power-first indexing
+            implied_accel = 2 * c_t2
+            note = (f"  Note: the discovered t^2 coefficient implies a constant second "
+                    f"derivative (acceleration) of {implied_accel:.3f} m/s^2 in {var_name}(t).")
+            if abs(abs(implied_accel) - G_REFERENCE) < 1.0:
+                note += f" This is close to Earth's gravitational acceleration ({G_REFERENCE} m/s^2)."
+            print(note)
 
     return winner, poly_best, sparse_best
 
