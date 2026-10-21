@@ -58,9 +58,6 @@ import argparse
 import csv
 
 import numpy as np
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 
 G_REFERENCE = 9.81  # m/s^2, Earth's gravity - used ONLY for post-hoc comparison/annotation
 
@@ -349,6 +346,11 @@ def discover_axis(t, y, var_name, max_poly_degree=6, verbose=True):
 # ---- Reporting & plotting ---------------------------------------------------
 
 def plot_results(t, x, y, x_winner, y_winner, out_png):
+    # Imported here so live.py can discover equations without Matplotlib installed.
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
     fig, axes = plt.subplots(2, 2, figsize=(12, 9))
 
     ax = axes[0, 0]

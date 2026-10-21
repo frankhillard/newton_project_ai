@@ -138,6 +138,34 @@ the last curve stays on screen until the next throw has a fit of its own.
 `--max-poly-degree` limits the polynomial powers in both discovery engines
 (default 6). `--camera` selects the camera index.
 
+The same script can run in Docker. The container needs this machine's webcam
+and X display, so pass both through. `xhost` is once per desktop session.
+
+```bash
+docker build -t newton-live .
+xhost +local:docker
+docker run --rm -it \
+  --device /dev/video0 \
+  --group-add video \
+  -e DISPLAY=$DISPLAY \
+  -e QT_X11_NO_MITSHM=1 \
+  -v /tmp/.X11-unix:/tmp/.X11-unix \
+  newton-live
+```
+
+`q` and `c` work when that terminal is attached and the window has focus.
+Extra flags go after the image name:
+
+```bash
+docker run --rm -it \
+  --device /dev/video0 \
+  --group-add video \
+  -e DISPLAY=$DISPLAY \
+  -e QT_X11_NO_MITSHM=1 \
+  -v /tmp/.X11-unix:/tmp/.X11-unix \
+  newton-live python live.py --max-poly-degree 2
+```
+
 ## Validating the pipeline
 
 `physics_discovery.py` was checked against synthetic data it had no way to
@@ -178,6 +206,7 @@ calibrate.py             # Stage 2: pixel trajectory -> metric trajectory CSV
 newton_fit.py           # Optional Stage: metric trajectory -> recover g (bias newton)
 physics_discovery.py    # Stage 3: metric trajectory -> discovered equation of motion + plot
 live.py                  # Webcam: track, calibrate, discover, overlay x(t) and y(t)
+Dockerfile               # Image that runs live.py, with the webcam and display passed in
 requirements.txt
 README.md
 ```

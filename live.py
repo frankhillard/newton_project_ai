@@ -34,7 +34,7 @@ from ball_tracker import DEFAULT_HSV_HIGH, DEFAULT_HSV_LOW, detect_ball_color
 from calibrate import TENNIS_BALL_DIAMETER_M
 from physics_discovery import discover_axis, predict_library
 
-MIN_POINTS = 8
+MIN_POINTS = 6
 CONFIRM_HITS = 3
 MISS_GAP_SEC = 0.4
 SEARCH_RADIUS_PX = 150
